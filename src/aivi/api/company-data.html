@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ข้อมูลบริษัท · AI_VI</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body data-page="company-data">
+  <header class="topbar">
+    <a class="brand" href="/chat">AI_VI</a>
+    <nav>
+      <a href="/chat">Chatbot</a>
+      <a href="/set-fetch">ดึงข้อมูล SET</a>
+      <a class="active" href="/company-data">ข้อมูลบริษัท</a>
+    </nav>
+    <button id="logout" class="quiet">ออกจากระบบ</button>
+  </header>
+  <main class="page">
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Company knowledge spaces</p>
+        <h1>ข้อมูลหุ้นทั้งหมด</h1>
+      </div>
+      <div class="filters">
+        <label>บริษัท<select id="company-filter"></select></label>
+        <button id="refresh-data" type="button">รีเฟรช</button>
+      </div>
+    </div>
+    <p id="status" class="status" role="status"></p>
+    <div id="company-data-list" class="company-data-list"></div>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

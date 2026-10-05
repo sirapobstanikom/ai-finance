@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI_VI</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>AI_VI</h1>
+      <p class="meta" id="company-label">ยังไม่ได้เลือกบริษัท</p>
+    </div>
+    <form id="token-form">
+      <label>API token
+        <input id="token" type="password" autocomplete="off" required>
+      </label>
+      <button type="submit">บันทึกโทเคน</button>
+    </form>
+  </header>
+  <p class="status" id="status" role="status"></p>
+  <div class="shell">
+    <aside class="side">
+      <h2>บริษัท</h2>
+      <div class="company-list" id="company-list"></div>
+      <form id="company-form">
+        <label>Ticker <input name="ticker" required placeholder="CPALL"></label>
+        <label>ตลาด <input name="market" value="SET"></label>
+        <label>ชื่อ <input name="name_en" placeholder="CP All"></label>
+        <button type="submit">สร้างบริษัท</button>
+      </form>
+      <form id="watch-form">
+        <label>รอบเฝ้าดู
+          <select name="cadence">
+            <option value="3d">ทุก 3 วัน</option>
+            <option value="weekly" selected>รายสัปดาห์</option>
+            <option value="monthly">รายเดือน</option>
+            <option value="event">รายเหตุการณ์</option>
+          </select>
+        </label>
+        <button type="submit">เพิ่มเข้า watchlist</button>
+      </form>
+    </aside>
+    <main class="main">
+      <div class="tabs" role="tablist">
+        <button type="button" data-panel="chat" aria-selected="true">แชท</button>
+        <button type="button" data-panel="thesis" aria-selected="false">Thesis</button>
+        <button type="button" data-panel="changes" aria-selected="false">สิ่งที่เปลี่ยน</button>
+        <button type="button" data-panel="documents" aria-selected="false">เอกสาร</button>
+        <button type="button" data-panel="proposals" aria-selected="false">ข้อเสนอ</button>
+      </div>
+
+      <section class="panel active" id="panel-chat">
+        <div id="transcript" class="stack"></div>
+        <form id="chat-form">
+          <label>คำถาม
+            <textarea name="message" required placeholder="ทำไมเราถึงคิดว่า CPALL ยังมี Growth?"></textarea>
+          </label>
+          <button type="submit">ส่ง</button>
+          <button type="button" id="close-chat">ปิดบทสนทนา</button>
+        </form>
+      </section>
+
+      <section class="panel" id="panel-thesis">
+        <div id="thesis-view" class="card"><p class="meta">ยังไม่มี thesis</p></div>
+        <form id="thesis-form" class="card">
+          <h2>บันทึก thesis</h2>
+          <label>สรุป <textarea name="summary"></textarea></label>
+          <div id="thesis-points"></div>
+          <button type="button" id="add-point">เพิ่มข้อ</button>
+          <button type="submit">บันทึก</button>
+        </form>
+      </section>
+
+      <section class="panel" id="panel-changes">
+        <div id="changes" class="stack"></div>
+      </section>
+
+      <section class="panel" id="panel-documents">
+        <form id="upload-form" class="card">
+          <h2>วางไฟล์</h2>
+          <label>ชนิด
+            <select name="doc_type">
+              <option value="annual_report">annual report</option>
+              <option value="financial_statement">financial statement</option>
+              <option value="research_note">research note</option>
+              <option value="presentation">presentation</option>
+              <option value="news">news</option>
+            </select>
+          </label>
+          <label>ไฟล์ <input name="file" type="file" accept=".txt,.md,.pdf" required></label>
+          <button type="submit">อัปโหลด</button>
+        </form>
+        <form id="knowledge-form" class="card">
+          <h2>บันทึกความรู้</h2>
+          <label>ประเภท
+            <select name="type">
+              <option>FACT</option>
+              <option>INSIGHT</option>
+              <option>ASSUMPTION</option>
+              <option>USER_OPINION</option>
+              <option>RISK</option>
+              <option>OBSERVATION</option>
+            </select>
+          </label>
+          <label>ส่วน
+            <select name="section">
+              <option value="business_model">business model</option>
+              <option value="financials">financials</option>
+              <option value="moat">moat</option>
+              <option value="risks">risks</option>
+              <option value="management">management</option>
+              <option value="industry">industry</option>
+              <option value="profile">profile</option>
+            </select>
+          </label>
+          <label>ข้อความ <textarea name="statement" required></textarea></label>
+          <button type="submit">บันทึก</button>
+        </form>
+      </section>
+
+      <section class="panel" id="panel-proposals">
+        <div id="proposals" class="stack"></div>
+      </section>
+    </main>
+  </div>
+  <script>
+    const state = { ticker: "", conversationId: null };
+
+    function esc(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[ch]));
+    }
+
+    function setStatus(message) {
+      document.getElementById("status").textContent = message || "";
+    }
+
+    async function api(path, options = {}) {
+      const headers = new Headers(options.headers || {});
+      const token = sessionStorage.getItem("aivi_token") || "";
+      if (token) headers.set("Authorization", "Bearer " + token);
+      let body = options.body;
+      if (options.json !== undefined) {
+        headers.set("Content-Type", "application/json");
+        body = JSON.stringify(options.json);
+      }
+      const response = await fetch(path, { method: options.method || "GET", headers, body });
+      const text = await response.text();
+      let data = null;
+      if (text) {
+        try { data = JSON.parse(text); } catch { data = { detail: text }; }
+      }
+      if (!response.ok) {
+        const detail = data && data.detail ? data.detail : response.statusText;
+        if (response.status === 401) sessionStorage.removeItem("aivi_token");
+        throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+      }
+      return data;
+    }
+
+    function selectedTicker() {
+      if (!state.ticker) throw new Error("เลือกบริษัทก่อน");
+      return encodeURIComponent(state.ticker);
+    }
+
+    document.getElementById("token-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      sessionStorage.setItem("aivi_token", document.getElementById("token").value.trim());
+      document.getElementById("token").value = "";
+      await refreshCompanies();
+    });
+
+    document.querySelectorAll(".tabs button").forEach((button) => {
+      button.addEventListener("click", () => showPanel(button.dataset.panel));
+    });
+
+    function showPanel(name) {
+      document.querySelectorAll(".tabs button").forEach((button) => {
+        button.setAttribute("aria-selected", String(button.dataset.panel === name));
+      });
+      document.querySelectorAll(".panel").forEach((panel) => {
+        panel.classList.toggle("active", panel.id === "panel-" + name);
+      });
+      if (name === "proposals") loadProposals().catch(showError);
+      if (name === "changes" && state.ticker) loadChanges().catch(showError);
+      if (name === "thesis" && state.ticker) loadThesis().catch(showError);
+    }
+
+    function showError(error) {
+      setStatus(error.message || String(error));
+    }
+
+    async function refreshCompanies() {
+      setStatus("");
+      const data = await api("/companies");
+      const list = document.getElementById("company-list");
+      list.replaceChildren();
+      for (const company of data.companies) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = company.ticker + (company.name_en ? " · " + company.name_en : "");
+        button.setAttribute("aria-current", String(company.ticker === state.ticker));
+        button.addEventListener("click", () => openCompany(company.ticker));
+        list.appendChild(button);
+      }
+      if (!data.companies.length) {
+        list.innerHTML = '<p class="meta">ยังไม่มีบริษัท</p>';
+      }
+    }
+
+    async function openCompany(ticker) {
+      state.ticker = ticker;
+      state.conversationId = null;
+      document.getElementById("company-label").textContent = ticker;
+      document.getElementById("transcript").replaceChildren();
+      await refreshCompanies();
+      await Promise.all([loadThesis(), loadChanges()]);
+      setStatus("เปิด " + ticker);
+    }
+
+    document.getElementById("company-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const payload = Object.fromEntries(new FormData(form).entries());
+      try {
+        await api("/companies", { method: "POST", json: payload });
+        form.reset();
+        form.market.value = "SET";
+        await refreshCompanies();
+        await openCompany(payload.ticker.toUpperCase());
+      } catch (error) {
+        showError(error);
+      }
+    });
+
+    document.getElementById("watch-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      try {
+        const cadence = new FormData(event.currentTarget).get("cadence");
+        const data = await api("/companies/" + selectedTicker() + "/watchlist", {
+          method: "POST",
+          json: { cadence },
+        });
+        setStatus("เพิ่ม watchlist แล้ว รอบ " + data.cadence);
+      } catch (error) {
+        showError(error);
+      }
+    });
+
+    document.getElementById("chat-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const message = new FormData(form).get("message");
+      try {
+        const body = { message };
+        if (state.conversationId) body.conversation_id = state.conversationId;
+        const data = await api("/companies/" + selectedTicker() + "/chat", {
+          method: "POST",
+          json: body,
+        });
+        if (data.conversation_id) state.conversationId = data.conversation_id;
+        const block = document.createElement("article");
+        block.className = "card";
+        block.innerHTML = "<p><strong>คุณ</strong></p><pre>" + esc(message) + "</pre>"
+          + "<p><strong>AI_VI</strong> <span class='meta'>" + esc(data.intent) + " · llm " + esc(data.llm_calls) + "</span></p>"
+          + "<pre>" + esc(data.answer) + "</pre>";
+        document.getElementById("transcript").prepend(block);
+        form.reset();
+        setStatus("");
+      } catch (error) {
+        showError(error);
+      }
+    });
+
+    document.getElementById("close-chat").addEventListener("click", async () => {
+      if (!state.conversationId) {
+        setStatus("ยังไม่มีบทสนทนาที่เปิดอยู่");
+        return;
+      }
+      try {
+        const data = await api("/conversations/" + state.conversationId + "/close", { method: "POST" });
+        state.conversationId = null;
+        setStatus("บันทึกความจำ " + data.memories.length + " รายการ");
+      } catch (error) {
+        showError(error);
+      }
+    });
+
+    function pointRow(label = "", statement = "") {
+      const row = document.createElement("div");
+      row.className = "stack";
+      row.innerHTML = '<label>หัวข้อ <input class="point-label" value="' + esc(label) + '"></label>'
+        + '<label>รายละเอียด <textarea class="point-statement">' + esc(statement) + "</textarea></label>";
+      return row;
+    }
+
+    const points = document.getElementById("thesis-points");
+    points.append(pointRow(), pointRow());
+    document.getElementById("add-point").addEventListener("click", () => points.append(pointRow()));
+
+    async function loadThesis() {
+      const data = await api("/companies/" + selectedTicker() + "/thesis");
+      const view = document.getElementById("thesis-view");
+      if (!data.thesis && !data.id) {
+        view.innerHTML = '<p class="meta">ยังไม่มี thesis</p>';
+        return;
+      }
+      const thesis = data.thesis === undefined ? data : data.thesis;
+      if (!thesis) {
+        view.innerHTML = '<p class="meta">ยังไม่มี thesis</p>';
+        return;
+      }
+      const items = (thesis.points || []).map((point) =>
+        "<li><strong>" + esc(point.label) + "</strong> <span class='meta'>" + esc(point.status) + "</span><pre>" + esc(point.statement) + "</pre></li>"
+      ).join("");
+      view.innerHTML = "<p class='meta'>version " + esc(thesis.version) + "</p><pre>" + esc(thesis.summary) + "</pre><ol>" + items + "</ol>";
+    }
+
+    document.getElementById("thesis-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const summary = new FormData(event.currentTarget).get("summary");
+      const payloadPoints = [];
+      document.querySelectorAll("#thesis-points .stack").forEach((row) => {
+        const label = row.querySelector(".point-label").value.trim();
+        const statement = row.querySelector(".point-statement").value.trim();
+        if (label && statement) payloadPoints.push({ label, statement });
+      });
+      try {
+        await api("/companies/" + selectedTicker() + "/thesis", {
+          method: "POST",
+          json: { summary, points: payloadPoints },
+        });
+        await loadThesis();
+        setStatus("บันทึก thesis แล้ว");
+      } catch (error) {
+        showError(error);
+      }
+    });
+
+    async function loadChanges() {
+      const data = await api("/companies/" + selectedTicker() + "/changes");
+      const view = document.getElementById("changes");
+      view.replaceChildren();
+      if (!data.changes.length) {
+        view.innerHTML = '<p class="meta">ยังไม่พบการเปลี่ยนแปลง</p>';
+        return;
+      }
+      for (const change of data.changes) {
+        const card = document.createElement("article");
+        card.className = "card";
+        card.innerHTML = "<pre>" + esc(change.summary) + "</pre>";
+        view.append(card);
+      }
+    }
+
+    document.getElementById("upload-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const body = new FormData(form);
+      try {
+        const data = await api("/companies/" + selectedTicker() + "/documents", { method: "POST", body });
+        setStatus(data.created ? "รับไฟล์แล้ว" : "ไฟล์นี้มีอยู่แล้ว จึงไม่ประมวลผลซ้ำ");
+        form.reset();
+        await loadChanges();
+      } catch (error) {
+        showError(error);
+      }
+    });
+
+    document.getElementById("knowledge-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const payload = Object.fromEntries(new FormData(form).entries());
+      try {
+        await api("/companies/" + selectedTicker() + "/knowledge", { method: "POST", json: payload });
+        form.statement.value = "";
+        setStatus("บันทึกความรู้แล้ว");
+      } catch (error) {
+        showError(error);
+      }
+    });
+
+    async function loadProposals() {
+      const data = await api("/proposals");
+      const view = document.getElementById("proposals");
+      view.replaceChildren();
+      if (!data.proposals.length) {
+        view.innerHTML = '<p class="meta">ไม่มีข้อเสนอที่รออนุมัติ</p>';
+        return;
+      }
+      for (const proposal of data.proposals) {
+        const card = document.createElement("article");
+        card.className = "card";
+        card.innerHTML = "<p><strong>" + esc(proposal.ticker) + "</strong> · " + esc(proposal.operation) + "</p>"
+          + "<pre>" + esc(JSON.stringify(proposal.payload, null, 2)) + "</pre>";
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = "อนุมัติ";
+        button.addEventListener("click", async () => {
+          try {
+            await api("/proposals/" + proposal.id + "/approve", { method: "POST" });
+            await loadProposals();
+            if (state.ticker) await loadThesis();
+            setStatus("อนุมัติแล้ว");
+          } catch (error) {
+            showError(error);
+          }
+        });
+        card.append(button);
+        view.append(card);
+      }
+    }
+
+    if (sessionStorage.getItem("aivi_token")) {
+      refreshCompanies().catch(showError);
+    } else {
+      setStatus("ใส่ API token จากไฟล์ .env ก่อน");
+    }
+  </script>
+</body>
+</html>

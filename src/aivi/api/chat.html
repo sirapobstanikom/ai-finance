@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chatbot · AI_VI</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body data-page="chat" class="chat-app">
+  <div class="chat-shell">
+    <aside class="chat-sidebar">
+      <a class="brand" href="/chat">AI_VI</a>
+      <button type="button" id="new-chat" class="new-chat">+ แชทใหม่</button>
+      <div class="sidebar-section">
+        <p class="sidebar-label">เครื่องมือ</p>
+        <a class="sidebar-link active" href="/chat">Chatbot</a>
+        <a class="sidebar-link" href="/set-fetch">ดึงข้อมูล SET</a>
+        <a class="sidebar-link" href="/company-data">ข้อมูลบริษัท</a>
+      </div>
+      <div class="sidebar-bottom">
+        <button id="close-chat" class="sidebar-action">บันทึกความจำ</button>
+        <button id="logout" class="sidebar-action">ออกจากระบบ</button>
+      </div>
+    </aside>
+
+    <main class="chat-main">
+      <header class="chat-top">
+        <div>
+          <strong>AI Investment Assistant</strong>
+          <span>วิเคราะห์จาก Knowledge Base ของคุณ</span>
+        </div>
+        <label class="chat-company-picker">หุ้น
+          <select id="company"></select>
+        </label>
+      </header>
+
+      <p id="status" class="chat-status" role="status"></p>
+
+      <div id="transcript" class="chat-transcript">
+        <section id="chat-welcome" class="chat-welcome">
+          <div class="assistant-mark">AI</div>
+          <h1>วันนี้อยากวิเคราะห์หุ้นตัวไหน</h1>
+          <p>เลือกบริษัทด้านบน แล้วถามจากเอกสาร ข้อมูล SET, Knowledge และ Investment Thesis ที่เก็บไว้</p>
+          <div class="prompt-grid">
+            <button type="button" class="prompt-suggestion">มีอะไรเปลี่ยนจาก Investment Thesis เดิมไหม</button>
+            <button type="button" class="prompt-suggestion">สรุปปัจจัยเสี่ยงที่สำคัญ</button>
+            <button type="button" class="prompt-suggestion">ทำไมบริษัทยังมี Growth</button>
+            <button type="button" class="prompt-suggestion">เราเคยคุยอะไรเกี่ยวกับบริษัทนี้ไว้บ้าง</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="composer-dock">
+        <form id="chat-form" class="chat-composer">
+          <textarea name="message" rows="1" required placeholder="ส่งข้อความถึง AI_VI"></textarea>
+          <button type="submit" class="send-button" aria-label="ส่งคำถาม">↑</button>
+        </form>
+        <p>AI อาจวิเคราะห์ผิด ควรตรวจสอบแหล่งข้อมูลก่อนตัดสินใจลงทุน</p>
+      </div>
+    </main>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

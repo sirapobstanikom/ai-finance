@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ดึงข้อมูล SET · AI_VI</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body data-page="set-fetch">
+  <header class="topbar">
+    <a class="brand" href="/chat">AI_VI</a>
+    <nav>
+      <a href="/chat">Chatbot</a>
+      <a class="active" href="/set-fetch">ดึงข้อมูล SET</a>
+      <a href="/company-data">ข้อมูลบริษัท</a>
+    </nav>
+    <button id="logout" class="quiet">ออกจากระบบ</button>
+  </header>
+  <main class="page narrow">
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Official SET data API</p>
+        <h1>ดึงและตรวจข้อมูลซ้ำ</h1>
+        <p class="muted">Python ดึง JSON จาก SET แล้ว hash เนื้อหา ถ้า hash เดิมจะไม่เพิ่มข้อมูล</p>
+      </div>
+    </div>
+    <p id="set-config" class="notice"></p>
+    <p id="status" class="status" role="status"></p>
+    <form id="fetch-form" class="panel-card">
+      <label>Ticker
+        <input name="ticker" list="tickers" placeholder="CPALL" pattern="[A-Za-z0-9.-]+" required>
+        <datalist id="tickers"></datalist>
+      </label>
+      <label>ชื่อบริษัท (ใส่เมื่อ ticker ยังไม่มีในระบบ)
+        <input name="name" placeholder="CP All">
+      </label>
+      <fieldset>
+        <legend>ข้อมูลที่จะดึง</legend>
+        <label class="check"><input type="checkbox" name="data_type" value="security_profile" checked> Security profile</label>
+        <label class="check"><input type="checkbox" name="data_type" value="delayed_quote" checked> Delayed quote</label>
+      </fieldset>
+      <button type="submit">ดึงข้อมูลจาก SET</button>
+    </form>
+    <div id="fetch-results" class="result-list"></div>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
